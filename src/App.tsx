@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Stage, Layer, Circle, Line, Text } from 'react-konva';
 import { 
   Shield as Swords, 
@@ -126,6 +126,16 @@ function App() {
     });
   };
 
+  const updateNodePosition = useCallback((nodeId: string, x: number, y: number) => {
+    setNodes(prevNodes => 
+      prevNodes.map(n => 
+        n.id === nodeId 
+          ? { ...n, x, y }
+          : n
+      )
+    );
+  }, []);
+
   const renderNodes = () => {
     return nodes.map((node) => (
       <Circle
@@ -139,13 +149,13 @@ function App() {
         onClick={() => handleNodeClick(node.id)}
         onTap={() => handleNodeClick(node.id)}
         draggable={selectedTool === 'select'}
+        onDragMove={(e) => {
+          // Update node position during drag for smooth line movement
+          updateNodePosition(node.id, e.target.x(), e.target.y());
+        }}
         onDragEnd={(e) => {
-          const updatedNodes = nodes.map(n => 
-            n.id === node.id 
-              ? { ...n, x: e.target.x(), y: e.target.y() }
-              : n
-          );
-          setNodes(updatedNodes);
+          // Final position update (redundant but kept for consistency)
+          updateNodePosition(node.id, e.target.x(), e.target.y());
         }}
       />
     ));
