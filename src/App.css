@@ -1,0 +1,129 @@
+/* Custom styles for the roguelike path maker */
+.App {
+  text-align: left;
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  background-color: #5D5A58;
+}
+
+.sidebar {
+  width: 256px;
+  background-color: #3E2723;
+  padding: 16px;
+  border-right: 2px solid #CD7F32;
+  overflow-y: auto;
+}
+
+.sidebar-title {
+  color: #F5F5DC;
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 24px;
+  margin-top: 0;
+}
+
+.node-type-container {
+  margin-bottom: 32px;
+}
+
+.node-type-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-radius: 8px;
+  border: 2px solid #4A4A4A;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 12px;
+}
+
+.node-type-button:hover {
+  border-color: #CD7F32;
+}
+
+.node-type-button.selected {
+  border-color: #B8860B;
+  background-color: rgba(184, 134, 11, 0.2);
+}
+
+.node-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+}
+
+.node-label {
+  color: #F5F5DC;
+  font-size: 14px;
+}
+
+.tools-section {
+  border-top: 1px solid #CD7F32;
+  padding-top: 16px;
+}
+
+.tools-title {
+  color: #F5F5DC;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  margin-top: 0;
+}
+
+.tool-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-radius: 8px;
+  border: 2px solid #4A4A4A;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tool-button:hover {
+  border-color: #CD7F32;
+}
+
+.tool-button.selected {
+  border-color: #B8860B;
+  background-color: rgba(184, 134, 11, 0.2);
+}
+
+.tool-label {
+  color: #F5F5DC;
+  font-size: 14px;
+}
+
+.connection-status {
+  margin-top: 8px;
+  padding: 8px;
+  background-color: rgba(184, 134, 11, 0.2);
+  border-radius: 4px;
+  color: #F5F5DC;
+  font-size: 12px;
+}
+
+.canvas-container {
+  flex: 1;
+  position: relative;
+}
+
+button:hover {
+  cursor: pointer;
+}
+
+/* Override any default button styles */
+button:focus {
+  outline: none;
+}
