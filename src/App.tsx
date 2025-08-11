@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Stage, Layer, Circle, Line, Text } from 'react-konva';
+import { Stage, Layer, Circle, Line, Text, Rect } from 'react-konva';
 import { 
   Shield as Swords, 
   LocalFireDepartment as SwordRose,
@@ -7,7 +7,8 @@ import {
   MonetizationOn as MoneyBag,
   Diamond,
   HelpOutline as QuestionMark,
-  LinearScale as LineIcon
+  LinearScale as LineIcon,
+  Add as AddIcon
 } from '@mui/icons-material';
 import './App.css';
 
@@ -51,6 +52,7 @@ interface Node {
   y: number;
   type: keyof typeof nodeTypes;
   layer: number;
+  areaId: string;
 }
 
 interface Connection {
@@ -58,17 +60,33 @@ interface Connection {
   to: string;
 }
 
+interface Area {
+  id: string;
+  name: string;
+  startLayer: number;
+  endLayer: number;
+  color: string;
+}
+
 function App() {
   const [nodes, setNodes] = useState<Node[]>([
     // Start node
-    { id: 'start', x: 400, y: 550, type: 'combat', layer: 0 }
+    { id: 'start', x: 400, y: 550, type: 'combat', layer: 0, areaId: 'area-1' }
   ]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [selectedTool, setSelectedTool] = useState<'select' | 'line'>('select');
   const [selectedNodeType, setSelectedNodeType] = useState<keyof typeof nodeTypes>('combat');
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
-  const [layers] = useState(7); // Number of layers
+  const [areas, setAreas] = useState<Area[]>([
+    { id: 'area-1', name: 'Starting Area', startLayer: 0, endLayer: 2, color: '#4A5D23' },
+    { id: 'area-2', name: 'Mid Game', startLayer: 3, endLayer: 4, color: '#5D2343' },
+    { id: 'area-3', name: 'End Game', startLayer: 5, endLayer: 6, color: '#23435D' }
+  ]);
+  const [stageScale, setStageScale] = useState(1);
+  const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
   const stageRef = useRef<any>(null);
+
+  const layers = Math.max(...areas.map(a => a.endLayer)) + 1;
 
   const layerHeight = 70;
   const startY = 500;
@@ -78,15 +96,59 @@ function App() {
     const nodesInLayer = nodes.filter(n => n.layer === layerIndex);
     const baseX = 200 + (nodesInLayer.length * 150);
     
+    // Find which area this layer belongs to
+    const area = areas.find(a => layerIndex >= a.startLayer && layerIndex <= a.endLayer);
+    if (!area) return;
+    
     const newNode: Node = {
       id: `node_${Date.now()}`,
       x: baseX,
       y: layerY,
       type: selectedNodeType,
-      layer: layerIndex
+      layer: layerIndex,
+      areaId: area.id
     };
     
     setNodes([...nodes, newNode]);
+  };
+
+  const handleWheel = (e: any) => {
+    e.evt.preventDefault();
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const scaleBy = 1.05;
+    const oldScale = stage.scaleX();
+    const newScale = e.evt.deltaY > 0 ? oldScale / scaleBy : oldScale * scaleBy;
+    
+    // Limit zoom levels
+    if (newScale < 0.3 || newScale > 3) return;
+
+    const pointer = stage.getPointerPosition();
+    const mousePointTo = {
+      x: (pointer.x - stage.x()) / oldScale,
+      y: (pointer.y - stage.y()) / oldScale,
+    };
+
+    const newPos = {
+      x: pointer.x - mousePointTo.x * newScale,
+      y: pointer.y - mousePointTo.y * newScale,
+    };
+
+    setStageScale(newScale);
+    setStagePosition(newPos);
+  };
+
+  const addNewArea = () => {
+    const lastLayer = Math.max(...areas.map(a => a.endLayer));
+    const newArea: Area = {
+      id: `area-${Date.now()}`,
+      name: `Area ${areas.length + 1}`,
+      startLayer: lastLayer + 1,
+      endLayer: lastLayer + 2,
+      color: `hsl(${Math.random() * 360}, 50%, 30%)`
+    };
+    setAreas([...areas, newArea]);
   };
 
   const handleNodeClick = (nodeId: string) => {
@@ -161,6 +223,59 @@ function App() {
     ));
   };
 
+  const renderAreas = () => {
+    const areaElements: React.ReactElement[] = [];
+    
+    areas.forEach(area => {
+      const areaStartY = startY - (area.startLayer * layerHeight);
+      const areaEndY = startY - ((area.endLayer + 1) * layerHeight);
+      const height = areaStartY - areaEndY;
+      
+      // Area background
+      areaElements.push(
+        <Rect
+          key={`area-bg-${area.id}`}
+          x={50}
+          y={areaEndY}
+          width={700}
+          height={height}
+          fill={area.color}
+          opacity={0.1}
+          stroke={area.color}
+          strokeWidth={1}
+          dash={[5, 5]}
+        />
+      );
+      
+      // Area separator line (thick line at the top of each area)
+      if (area.startLayer > 0) {
+        areaElements.push(
+          <Line
+            key={`area-separator-${area.id}`}
+            points={[50, startY - (area.startLayer * layerHeight) + layerHeight/2, 750, startY - (area.startLayer * layerHeight) + layerHeight/2]}
+            stroke={area.color}
+            strokeWidth={4}
+          />
+        );
+      }
+      
+      // Area label
+      areaElements.push(
+        <Text
+          key={`area-label-${area.id}`}
+          x={60}
+          y={areaEndY + 10}
+          text={area.name}
+          fontSize={14}
+          fill={area.color}
+          fontStyle="bold"
+        />
+      );
+    });
+    
+    return areaElements;
+  };
+
   const renderLayers = () => {
     const layerElements = [];
     
@@ -174,6 +289,7 @@ function App() {
           stroke="#5D5A58"
           strokeWidth={1}
           dash={[10, 5]}
+          opacity={0.5}
         />
       );
     }
@@ -186,6 +302,10 @@ function App() {
     
     for (let i = 1; i < layers; i++) {
       const y = startY - (i * layerHeight) + (layerHeight / 2);
+      const area = areas.find(a => i >= a.startLayer && i <= a.endLayer);
+      
+      // Only show add button if layer belongs to an area
+      if (!area) continue;
       
       buttons.push(
         <Circle
@@ -193,11 +313,12 @@ function App() {
           x={400}
           y={y}
           radius={15}
-          fill="#4A4A4A"
+          fill={area.color}
           stroke="#F5F5DC"
           strokeWidth={2}
           onClick={() => addNode(i)}
           onTap={() => addNode(i)}
+          opacity={0.8}
         />
       );
       
@@ -269,6 +390,29 @@ function App() {
             </div>
           )}
         </div>
+
+        {/* Areas management */}
+        <div className="areas-section">
+          <h3 className="areas-title">Areas</h3>
+          
+          {areas.map(area => (
+            <div key={area.id} className="area-item">
+              <div 
+                className="area-color" 
+                style={{ backgroundColor: area.color }}
+              />
+              <span className="area-name">{area.name}</span>
+            </div>
+          ))}
+          
+          <button
+            onClick={addNewArea}
+            className="add-area-button"
+          >
+            <AddIcon style={{ color: '#F5F5DC', marginRight: '8px' }} />
+            <span className="tool-label">Add Area</span>
+          </button>
+        </div>
       </div>
 
       {/* Main canvas area */}
@@ -277,14 +421,30 @@ function App() {
           width={window.innerWidth - 256} 
           height={window.innerHeight}
           ref={stageRef}
+          scaleX={stageScale}
+          scaleY={stageScale}
+          x={stagePosition.x}
+          y={stagePosition.y}
+          onWheel={handleWheel}
+          draggable={selectedTool === 'select'}
         >
           <Layer>
+            {renderAreas()}
             {renderLayers()}
             {renderConnections()}
             {renderAddLayerButtons()}
             {renderNodes()}
           </Layer>
         </Stage>
+        
+        <div className="canvas-controls">
+          <div className="zoom-info">
+            Zoom: {Math.round(stageScale * 100)}%
+          </div>
+          <div className="canvas-help">
+            Mouse wheel: Zoom | Drag: Pan (when Select tool active)
+          </div>
+        </div>
       </div>
     </div>
   );
