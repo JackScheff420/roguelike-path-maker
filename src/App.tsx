@@ -155,15 +155,21 @@ function App() {
   };
 
   const handleStageClick = (e: any) => {
-    // Only handle clicks on the stage background, not on nodes or other elements
-    if (e.target === e.target.getStage()) {
+    // Allow clicks on the stage background OR on area background rectangles and layer lines
+    // but not on nodes or other interactive elements
+    const targetName = e.target.getClassName();
+    const isBackground = e.target === e.target.getStage() || 
+                        targetName === 'Rect' || 
+                        targetName === 'Line' ||
+                        targetName === 'Text';
+    
+    if (isBackground && selectedTool === 'node') {
       const stage = stageRef.current;
       const pointerPosition = stage.getPointerPosition();
-      const stageAttrs = stage.attrs;
       
       // Convert screen coordinates to stage coordinates accounting for scale and position
-      const x = (pointerPosition.x - stageAttrs.x) / stageAttrs.scaleX;
-      const y = (pointerPosition.y - stageAttrs.y) / stageAttrs.scaleY;
+      const x = (pointerPosition.x - stage.x()) / stage.scaleX();
+      const y = (pointerPosition.y - stage.y()) / stage.scaleY();
       
       addNodeAtPosition(x, y);
     }
