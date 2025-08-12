@@ -168,10 +168,76 @@ function App() {
     const area = areas.find(a => layerIndex >= a.startLayer && layerIndex <= a.endLayer);
     if (!area || layerIndex < 0 || layerIndex >= layers) return;
     
+    // Define area boundaries for node placement
+    const areaLeft = 80;   // Left boundary with margin
+    const areaRight = 720; // Right boundary with margin
+    const areaWidth = areaRight - areaLeft;
+    
+    // Constrain X position within area boundaries
+    const constrainedX = Math.max(areaLeft, Math.min(areaRight, x));
+    
+    // Get existing nodes in this layer to avoid overlap
+    const existingNodesInLayer = nodes.filter(n => n.layer === layerIndex && n.areaId === area.id);
+    
+    // Smart positioning: if there are existing nodes, place new nodes to avoid overlap
+    let finalX = constrainedX;
+    let finalY = startY - (layerIndex * layerHeight);
+    
+    if (existingNodesInLayer.length > 0) {
+      // Try to find a position that doesn't overlap with existing nodes
+      const nodeRadius = 25; // Node radius from the Circle component
+      const minDistance = nodeRadius * 2 + 10; // Minimum distance between node centers
+      
+      // Function to check if a position overlaps with existing nodes
+      const checkOverlap = (checkX: number, checkY: number): boolean => {
+        return existingNodesInLayer.some(existingNode => {
+          const distance = Math.sqrt(
+            Math.pow(checkX - existingNode.x, 2) + 
+            Math.pow(checkY - existingNode.y, 2)
+          );
+          return distance < minDistance;
+        });
+      };
+      
+      let attempts = 0;
+      let positionFound = false;
+      
+      while (attempts < 50 && !positionFound) {
+        // Check if current position overlaps with any existing node
+        if (!checkOverlap(finalX, finalY)) {
+          positionFound = true;
+        } else {
+          // Try a new position: distribute nodes evenly across the layer width
+          const nodeIndex = existingNodesInLayer.length;
+          const totalNodesInLayer = nodeIndex + 1;
+          const spacing = areaWidth / (totalNodesInLayer + 1);
+          finalX = areaLeft + spacing * (nodeIndex + 1);
+          
+          // If still overlapping, add some random offset
+          if (attempts > 25) {
+            finalX += (Math.random() - 0.5) * 100;
+            finalY += (Math.random() - 0.5) * 20;
+          }
+          
+          // Ensure we stay within boundaries
+          finalX = Math.max(areaLeft, Math.min(areaRight, finalX));
+        }
+        attempts++;
+      }
+      
+      // If we couldn't find a good position, place it evenly distributed
+      if (!positionFound) {
+        const nodeIndex = existingNodesInLayer.length;
+        const totalNodesInLayer = nodeIndex + 1;
+        const spacing = areaWidth / (totalNodesInLayer + 1);
+        finalX = areaLeft + spacing * (nodeIndex + 1);
+      }
+    }
+    
     const newNode: Node = {
       id: `node_${Date.now()}`,
-      x: x,
-      y: startY - (layerIndex * layerHeight),
+      x: finalX,
+      y: finalY,
       type: selectedNodeType,
       layer: layerIndex,
       areaId: area.id
@@ -278,13 +344,28 @@ function App() {
 
   const updateNodePosition = useCallback((nodeId: string, x: number, y: number) => {
     setNodes(prevNodes => 
-      prevNodes.map(n => 
-        n.id === nodeId 
-          ? { ...n, x, y }
-          : n
-      )
+      prevNodes.map(n => {
+        if (n.id === nodeId) {
+          // Find the area for this node
+          const nodeArea = areas.find(a => a.id === n.areaId);
+          if (!nodeArea) return { ...n, x, y };
+          
+          // Define area boundaries
+          const areaLeft = 80;
+          const areaRight = 720;
+          const layerTop = startY - ((nodeArea.endLayer + 1) * layerHeight);
+          const layerBottom = startY - (nodeArea.startLayer * layerHeight);
+          
+          // Constrain position within area boundaries
+          const constrainedX = Math.max(areaLeft, Math.min(areaRight, x));
+          const constrainedY = Math.max(layerTop, Math.min(layerBottom, y));
+          
+          return { ...n, x: constrainedX, y: constrainedY };
+        }
+        return n;
+      })
     );
-  }, []);
+  }, [areas, startY, layerHeight]);
 
   const renderNodes = () => {
     return nodes.map((node) => (
