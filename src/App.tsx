@@ -9,7 +9,9 @@ import {
   HelpOutline as QuestionMark,
   LinearScale as LineIcon,
   Add as AddIcon,
-  AddCircle as NodeIcon
+  AddCircle as NodeIcon,
+  GetApp as ExportIcon,
+  Publish as ImportIcon
 } from '@mui/icons-material';
 import './App.css';
 
@@ -69,6 +71,13 @@ interface Area {
   color: string;
 }
 
+interface MapData {
+  nodes: Node[];
+  connections: Connection[];
+  areas: Area[];
+  version: string;
+}
+
 function App() {
   const [nodes, setNodes] = useState<Node[]>([
     // Start node
@@ -91,6 +100,62 @@ function App() {
 
   const layerHeight = 70;
   const startY = 500;
+
+  // Export functionality
+  const exportMap = () => {
+    const mapData: MapData = {
+      nodes,
+      connections,
+      areas,
+      version: '1.0.0'
+    };
+    
+    const dataStr = JSON.stringify(mapData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `roguelike-map-${new Date().getTime()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Import functionality
+  const importMap = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const mapData: MapData = JSON.parse(e.target?.result as string);
+        
+        // Validate the imported data structure
+        if (mapData.nodes && mapData.connections && mapData.areas) {
+          setNodes(mapData.nodes);
+          setConnections(mapData.connections);
+          setAreas(mapData.areas);
+          
+          // Reset tool state
+          setSelectedTool('select');
+          setConnectingFrom(null);
+          
+          console.log('Map imported successfully');
+        } else {
+          alert('Invalid map file format');
+        }
+      } catch (error) {
+        alert('Error reading map file: ' + error);
+      }
+    };
+    reader.readAsText(file);
+    
+    // Clear the input to allow re-importing the same file
+    event.target.value = '';
+  };
 
   const addNodeAtPosition = (x: number, y: number) => {
     if (selectedTool !== 'node') return;
@@ -409,6 +474,30 @@ function App() {
             <AddIcon style={{ color: '#F5F5DC', marginRight: '8px' }} />
             <span className="tool-label">Add Area</span>
           </button>
+        </div>
+
+        {/* Export/Import Section */}
+        <div className="export-import-section">
+          <h3 className="export-import-title">Map Data</h3>
+          
+          <button
+            onClick={exportMap}
+            className="export-button"
+          >
+            <ExportIcon style={{ color: '#F5F5DC', marginRight: '8px' }} />
+            <span className="tool-label">Export Map</span>
+          </button>
+          
+          <label className="import-button">
+            <ImportIcon style={{ color: '#F5F5DC', marginRight: '8px' }} />
+            <span className="tool-label">Import Map</span>
+            <input
+              type="file"
+              accept=".json"
+              onChange={importMap}
+              style={{ display: 'none' }}
+            />
+          </label>
         </div>
       </div>
 
