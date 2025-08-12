@@ -8,7 +8,8 @@ import {
   Diamond,
   HelpOutline as QuestionMark,
   LinearScale as LineIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  AddCircle as NodeIcon
 } from '@mui/icons-material';
 import './App.css';
 
@@ -74,7 +75,7 @@ function App() {
     { id: 'start', x: 400, y: 550, type: 'combat', layer: 0, areaId: 'area-1' }
   ]);
   const [connections, setConnections] = useState<Connection[]>([]);
-  const [selectedTool, setSelectedTool] = useState<'select' | 'line'>('select');
+  const [selectedTool, setSelectedTool] = useState<'select' | 'line' | 'node'>('select');
   const [selectedNodeType, setSelectedNodeType] = useState<keyof typeof nodeTypes>('combat');
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
   const [areas, setAreas] = useState<Area[]>([
@@ -91,19 +92,21 @@ function App() {
   const layerHeight = 70;
   const startY = 500;
 
-  const addNode = (layerIndex: number) => {
-    const layerY = startY - (layerIndex * layerHeight);
-    const nodesInLayer = nodes.filter(n => n.layer === layerIndex);
-    const baseX = 200 + (nodesInLayer.length * 150);
+  const addNodeAtPosition = (x: number, y: number) => {
+    if (selectedTool !== 'node') return;
+    
+    // Determine which layer this position belongs to
+    const clickY = y;
+    const layerIndex = Math.round((startY - clickY) / layerHeight);
     
     // Find which area this layer belongs to
     const area = areas.find(a => layerIndex >= a.startLayer && layerIndex <= a.endLayer);
-    if (!area) return;
+    if (!area || layerIndex < 0 || layerIndex >= layers) return;
     
     const newNode: Node = {
       id: `node_${Date.now()}`,
-      x: baseX,
-      y: layerY,
+      x: x,
+      y: startY - (layerIndex * layerHeight),
       type: selectedNodeType,
       layer: layerIndex,
       areaId: area.id
@@ -151,6 +154,20 @@ function App() {
     setAreas([...areas, newArea]);
   };
 
+  const handleStageClick = (e: any) => {
+    // Only handle clicks on the stage background, not on nodes or other elements
+    if (e.target === e.target.getStage()) {
+      const stage = stageRef.current;
+      const pointerPosition = stage.getPointerPosition();
+      const stageAttrs = stage.attrs;
+      
+      // Convert screen coordinates to stage coordinates accounting for scale and position
+      const x = (pointerPosition.x - stageAttrs.x) / stageAttrs.scaleX;
+      const y = (pointerPosition.y - stageAttrs.y) / stageAttrs.scaleY;
+      
+      addNodeAtPosition(x, y);
+    }
+  };
   const handleNodeClick = (nodeId: string) => {
     if (selectedTool === 'line') {
       if (!connectingFrom) {
@@ -247,14 +264,15 @@ function App() {
         />
       );
       
-      // Area separator line (thick line at the top of each area)
+      // Area separator line (black dashed line at the top of each area)
       if (area.startLayer > 0) {
         areaElements.push(
           <Line
             key={`area-separator-${area.id}`}
             points={[50, startY - (area.startLayer * layerHeight) + layerHeight/2, 750, startY - (area.startLayer * layerHeight) + layerHeight/2]}
-            stroke={area.color}
-            strokeWidth={4}
+            stroke="#000000"
+            strokeWidth={2}
+            dash={[10, 5]}
           />
         );
       }
@@ -286,10 +304,10 @@ function App() {
         <Line
           key={`layer-${i}`}
           points={[50, y, 750, y]}
-          stroke="#5D5A58"
+          stroke="#000000"
           strokeWidth={1}
-          dash={[10, 5]}
-          opacity={0.5}
+          dash={[5, 3]}
+          opacity={0.8}
         />
       );
     }
@@ -297,47 +315,7 @@ function App() {
     return layerElements;
   };
 
-  const renderAddLayerButtons = () => {
-    const buttons = [];
-    
-    for (let i = 1; i < layers; i++) {
-      const y = startY - (i * layerHeight) + (layerHeight / 2);
-      const area = areas.find(a => i >= a.startLayer && i <= a.endLayer);
-      
-      // Only show add button if layer belongs to an area
-      if (!area) continue;
-      
-      buttons.push(
-        <Circle
-          key={`add-layer-${i}`}
-          x={400}
-          y={y}
-          radius={15}
-          fill={area.color}
-          stroke="#F5F5DC"
-          strokeWidth={2}
-          onClick={() => addNode(i)}
-          onTap={() => addNode(i)}
-          opacity={0.8}
-        />
-      );
-      
-      buttons.push(
-        <Text
-          key={`add-layer-text-${i}`}
-          x={395}
-          y={y - 5}
-          text="+"
-          fontSize={16}
-          fill="#F5F5DC"
-          onClick={() => addNode(i)}
-          onTap={() => addNode(i)}
-        />
-      );
-    }
-    
-    return buttons;
-  };
+  // Removed renderAddLayerButtons - replaced with Node Tool
 
   return (
     <div className="app-container">
@@ -370,6 +348,17 @@ function App() {
         {/* Tools */}
         <div className="tools-section">
           <h3 className="tools-title">Tools</h3>
+          
+          <button
+            onClick={() => {
+              setSelectedTool('node');
+              setConnectingFrom(null);
+            }}
+            className={`tool-button ${selectedTool === 'node' ? 'selected' : ''}`}
+          >
+            <NodeIcon style={{ color: '#F5F5DC', marginRight: '8px' }} />
+            <span className="tool-label">Node Tool</span>
+          </button>
           
           <button
             onClick={() => {
@@ -426,13 +415,14 @@ function App() {
           x={stagePosition.x}
           y={stagePosition.y}
           onWheel={handleWheel}
+          onClick={handleStageClick}
+          onTap={handleStageClick}
           draggable={selectedTool === 'select'}
         >
           <Layer>
             {renderAreas()}
             {renderLayers()}
             {renderConnections()}
-            {renderAddLayerButtons()}
             {renderNodes()}
           </Layer>
         </Stage>
@@ -442,7 +432,7 @@ function App() {
             Zoom: {Math.round(stageScale * 100)}%
           </div>
           <div className="canvas-help">
-            Mouse wheel: Zoom | Drag: Pan (when Select tool active)
+            Mouse wheel: Zoom | Drag: Pan (when Select tool active) | Node Tool: Click to add nodes
           </div>
         </div>
       </div>

@@ -168,6 +168,16 @@
 .canvas-container {
   flex: 1;
   position: relative;
+  cursor: grab;
+  background-image: 
+    radial-gradient(circle at 25px 25px, rgba(139, 115, 85, 0.1) 2%, transparent 0%),
+    radial-gradient(circle at 75px 75px, rgba(139, 115, 85, 0.08) 1%, transparent 0%);
+  background-size: 100px 100px;
+  background-color: #f8f6f0;
+}
+
+.canvas-container:active {
+  cursor: grabbing;
 }
 
 .canvas-controls {
