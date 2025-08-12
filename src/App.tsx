@@ -357,13 +357,15 @@ function App() {
           
           <button
             onClick={() => {
-              setSelectedTool('node');
+              setSelectedTool(selectedTool === 'node' ? 'select' : 'node');
               setConnectingFrom(null);
             }}
             className={`tool-button ${selectedTool === 'node' ? 'selected' : ''}`}
           >
             <NodeIcon style={{ color: '#F5F5DC', marginRight: '8px' }} />
-            <span className="tool-label">Node Tool</span>
+            <span className="tool-label">
+              {selectedTool === 'node' ? 'Exit Node Tool' : 'Node Tool'}
+            </span>
           </button>
           
           <button
