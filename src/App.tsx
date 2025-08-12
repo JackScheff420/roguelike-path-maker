@@ -9,7 +9,9 @@ import {
   HelpOutline as QuestionMark,
   LinearScale as LineIcon,
   Add as AddIcon,
-  AddCircle as NodeIcon
+  AddCircle as NodeIcon,
+  GetApp as ExportIcon,
+  Publish as ImportIcon
 } from '@mui/icons-material';
 import './App.css';
 
@@ -69,6 +71,13 @@ interface Area {
   color: string;
 }
 
+interface MapData {
+  nodes: Node[];
+  connections: Connection[];
+  areas: Area[];
+  version: string;
+}
+
 function App() {
   const [nodes, setNodes] = useState<Node[]>([
     // Start node
@@ -86,11 +95,72 @@ function App() {
   const [stageScale, setStageScale] = useState(1);
   const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
   const stageRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const layers = Math.max(...areas.map(a => a.endLayer)) + 1;
 
   const layerHeight = 70;
   const startY = 500;
+
+  // Export functionality
+  const exportMap = () => {
+    const mapData: MapData = {
+      nodes,
+      connections,
+      areas,
+      version: '1.0.0'
+    };
+    
+    const dataStr = JSON.stringify(mapData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `roguelike-map-${new Date().getTime()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Import functionality
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const importMap = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const mapData: MapData = JSON.parse(e.target?.result as string);
+        
+        // Validate the imported data structure
+        if (mapData.nodes && mapData.connections && mapData.areas) {
+          setNodes(mapData.nodes);
+          setConnections(mapData.connections);
+          setAreas(mapData.areas);
+          
+          // Reset tool state
+          setSelectedTool('select');
+          setConnectingFrom(null);
+          
+          console.log('Map imported successfully');
+        } else {
+          alert('Invalid map file format');
+        }
+      } catch (error) {
+        alert('Error reading map file: ' + error);
+      }
+    };
+    reader.readAsText(file);
+    
+    // Clear the input to allow re-importing the same file
+    event.target.value = '';
+  };
 
   const addNodeAtPosition = (x: number, y: number) => {
     if (selectedTool !== 'node') return;
@@ -103,10 +173,76 @@ function App() {
     const area = areas.find(a => layerIndex >= a.startLayer && layerIndex <= a.endLayer);
     if (!area || layerIndex < 0 || layerIndex >= layers) return;
     
+    // Define area boundaries for node placement
+    const areaLeft = 80;   // Left boundary with margin
+    const areaRight = 720; // Right boundary with margin
+    const areaWidth = areaRight - areaLeft;
+    
+    // Constrain X position within area boundaries
+    const constrainedX = Math.max(areaLeft, Math.min(areaRight, x));
+    
+    // Get existing nodes in this layer to avoid overlap
+    const existingNodesInLayer = nodes.filter(n => n.layer === layerIndex && n.areaId === area.id);
+    
+    // Smart positioning: if there are existing nodes, place new nodes to avoid overlap
+    let finalX = constrainedX;
+    let finalY = startY - (layerIndex * layerHeight);
+    
+    if (existingNodesInLayer.length > 0) {
+      // Try to find a position that doesn't overlap with existing nodes
+      const nodeRadius = 25; // Node radius from the Circle component
+      const minDistance = nodeRadius * 2 + 10; // Minimum distance between node centers
+      
+      // Function to check if a position overlaps with existing nodes
+      const checkOverlap = (checkX: number, checkY: number): boolean => {
+        return existingNodesInLayer.some(existingNode => {
+          const distance = Math.sqrt(
+            Math.pow(checkX - existingNode.x, 2) + 
+            Math.pow(checkY - existingNode.y, 2)
+          );
+          return distance < minDistance;
+        });
+      };
+      
+      let attempts = 0;
+      let positionFound = false;
+      
+      while (attempts < 50 && !positionFound) {
+        // Check if current position overlaps with any existing node
+        if (!checkOverlap(finalX, finalY)) {
+          positionFound = true;
+        } else {
+          // Try a new position: distribute nodes evenly across the layer width
+          const nodeIndex = existingNodesInLayer.length;
+          const totalNodesInLayer = nodeIndex + 1;
+          const spacing = areaWidth / (totalNodesInLayer + 1);
+          finalX = areaLeft + spacing * (nodeIndex + 1);
+          
+          // If still overlapping, add some random offset
+          if (attempts > 25) {
+            finalX += (Math.random() - 0.5) * 100;
+            finalY += (Math.random() - 0.5) * 20;
+          }
+          
+          // Ensure we stay within boundaries
+          finalX = Math.max(areaLeft, Math.min(areaRight, finalX));
+        }
+        attempts++;
+      }
+      
+      // If we couldn't find a good position, place it evenly distributed
+      if (!positionFound) {
+        const nodeIndex = existingNodesInLayer.length;
+        const totalNodesInLayer = nodeIndex + 1;
+        const spacing = areaWidth / (totalNodesInLayer + 1);
+        finalX = areaLeft + spacing * (nodeIndex + 1);
+      }
+    }
+    
     const newNode: Node = {
       id: `node_${Date.now()}`,
-      x: x,
-      y: startY - (layerIndex * layerHeight),
+      x: finalX,
+      y: finalY,
       type: selectedNodeType,
       layer: layerIndex,
       areaId: area.id
@@ -205,7 +341,7 @@ function App() {
           points={[fromNode.x, fromNode.y, toNode.x, toNode.y]}
           stroke="#8B7355"
           strokeWidth={3}
-          tension={0.1}
+          tension={0}
         />
       );
     });
@@ -213,11 +349,14 @@ function App() {
 
   const updateNodePosition = useCallback((nodeId: string, x: number, y: number) => {
     setNodes(prevNodes => 
-      prevNodes.map(n => 
-        n.id === nodeId 
-          ? { ...n, x, y }
-          : n
-      )
+      prevNodes.map(n => {
+        if (n.id === nodeId) {
+          // Allow nodes to be dragged anywhere on the canvas
+          // Remove area boundary constraints for dragging
+          return { ...n, x, y };
+        }
+        return n;
+      })
     );
   }, []);
 
@@ -409,6 +548,35 @@ function App() {
             <AddIcon style={{ color: '#F5F5DC', marginRight: '8px' }} />
             <span className="tool-label">Add Area</span>
           </button>
+        </div>
+
+        {/* Export/Import Section */}
+        <div className="export-import-section">
+          <h3 className="export-import-title">Map Data</h3>
+          
+          <button
+            onClick={exportMap}
+            className="export-button"
+          >
+            <ExportIcon style={{ color: '#F5F5DC', marginRight: '8px' }} />
+            <span className="tool-label">Export Map</span>
+          </button>
+          
+          <button
+            onClick={handleImportClick}
+            className="import-button"
+          >
+            <ImportIcon style={{ color: '#F5F5DC', marginRight: '8px' }} />
+            <span className="tool-label">Import Map</span>
+          </button>
+          
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={importMap}
+            style={{ display: 'none' }}
+          />
         </div>
       </div>
 
