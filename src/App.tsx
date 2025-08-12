@@ -351,26 +351,14 @@ function App() {
     setNodes(prevNodes => 
       prevNodes.map(n => {
         if (n.id === nodeId) {
-          // Find the area for this node
-          const nodeArea = areas.find(a => a.id === n.areaId);
-          if (!nodeArea) return { ...n, x, y };
-          
-          // Define area boundaries
-          const areaLeft = 80;
-          const areaRight = 720;
-          const layerTop = startY - ((nodeArea.endLayer + 1) * layerHeight);
-          const layerBottom = startY - (nodeArea.startLayer * layerHeight);
-          
-          // Constrain position within area boundaries
-          const constrainedX = Math.max(areaLeft, Math.min(areaRight, x));
-          const constrainedY = Math.max(layerTop, Math.min(layerBottom, y));
-          
-          return { ...n, x: constrainedX, y: constrainedY };
+          // Allow nodes to be dragged anywhere on the canvas
+          // Remove area boundary constraints for dragging
+          return { ...n, x, y };
         }
         return n;
       })
     );
-  }, [areas, startY, layerHeight]);
+  }, []);
 
   const renderNodes = () => {
     return nodes.map((node) => (
