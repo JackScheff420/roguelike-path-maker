@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/roguelike-path-maker/static/css/main.68c5f155.css",
+    "main.js": "/roguelike-path-maker/static/js/main.1e9e751f.js",
+    "static/js/453.2701fff9.chunk.js": "/roguelike-path-maker/static/js/453.2701fff9.chunk.js",
+    "index.html": "/roguelike-path-maker/index.html",
+    "main.68c5f155.css.map": "/roguelike-path-maker/static/css/main.68c5f155.css.map",
+    "main.1e9e751f.js.map": "/roguelike-path-maker/static/js/main.1e9e751f.js.map",
+    "453.2701fff9.chunk.js.map": "/roguelike-path-maker/static/js/453.2701fff9.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.68c5f155.css",
+    "static/js/main.1e9e751f.js"
+  ]
+}
