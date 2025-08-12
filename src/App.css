@@ -207,6 +207,7 @@
   background: transparent;
   cursor: pointer;
   transition: all 0.2s ease;
+  margin-bottom: 12px;
 }
 
 .import-button:hover {

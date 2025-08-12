@@ -95,6 +95,7 @@ function App() {
   const [stageScale, setStageScale] = useState(1);
   const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
   const stageRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const layers = Math.max(...areas.map(a => a.endLayer)) + 1;
 
@@ -124,6 +125,10 @@ function App() {
   };
 
   // Import functionality
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
   const importMap = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -336,7 +341,7 @@ function App() {
           points={[fromNode.x, fromNode.y, toNode.x, toNode.y]}
           stroke="#8B7355"
           strokeWidth={3}
-          tension={0.1}
+          tension={0}
         />
       );
     });
@@ -569,16 +574,21 @@ function App() {
             <span className="tool-label">Export Map</span>
           </button>
           
-          <label className="import-button">
+          <button
+            onClick={handleImportClick}
+            className="import-button"
+          >
             <ImportIcon style={{ color: '#F5F5DC', marginRight: '8px' }} />
             <span className="tool-label">Import Map</span>
-            <input
-              type="file"
-              accept=".json"
-              onChange={importMap}
-              style={{ display: 'none' }}
-            />
-          </label>
+          </button>
+          
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={importMap}
+            style={{ display: 'none' }}
+          />
         </div>
       </div>
 
