@@ -114,9 +114,92 @@
   font-size: 12px;
 }
 
+.areas-section {
+  border-top: 1px solid #CD7F32;
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.areas-title {
+  color: #F5F5DC;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  margin-top: 0;
+}
+
+.area-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #4A4A4A;
+}
+
+.area-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  margin-right: 12px;
+  border: 1px solid #F5F5DC;
+}
+
+.area-name {
+  color: #F5F5DC;
+  font-size: 14px;
+}
+
+.add-area-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-radius: 8px;
+  border: 2px solid #4A4A4A;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 12px;
+}
+
+.add-area-button:hover {
+  border-color: #CD7F32;
+}
+
 .canvas-container {
   flex: 1;
   position: relative;
+  cursor: grab;
+  background-image: 
+    radial-gradient(circle at 25px 25px, rgba(139, 115, 85, 0.1) 2%, transparent 0%),
+    radial-gradient(circle at 75px 75px, rgba(139, 115, 85, 0.08) 1%, transparent 0%);
+  background-size: 100px 100px;
+  background-color: #f8f6f0;
+}
+
+.canvas-container:active {
+  cursor: grabbing;
+}
+
+.canvas-controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background-color: rgba(62, 39, 35, 0.9);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #CD7F32;
+}
+
+.zoom-info {
+  color: #F5F5DC;
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.canvas-help {
+  color: #B8860B;
+  font-size: 12px;
 }
 
 button:hover {
